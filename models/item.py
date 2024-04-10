@@ -1,6 +1,4 @@
 from pydantic import BaseModel, Field
-from uuid import uuid4
-from datetime import datetime
 from random import randint
 
 def generate_barcode_number(length):
@@ -13,4 +11,6 @@ class Item(BaseModel):
     price: float
     quantity: int
     category: str
+
+    barcode: str
     
