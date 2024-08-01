@@ -1,16 +1,7 @@
 from pydantic import BaseModel, Field
-from random import randint
-
-def generate_barcode_number(length):
-    barcode_number = ''.join(str(randint(0, 9)) for _ in range(length))
-    return barcode_number
-
+from uuid import uuid4
 
 class Item(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid4()))  # Unique ID for the item
     name: str
     price: float
-    quantity: int
-    category: str
-
-    barcode: str
-    
