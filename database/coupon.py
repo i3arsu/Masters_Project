@@ -4,8 +4,8 @@ from typing import Optional
 from uuid import uuid4
 from .db import dynamodb
 from fastapi import HTTPException
-from ..models import Coupon
-from ..models import OrderRequest
+from models.coupon import Coupon
+from models.orderRequest import OrderRequest
 
 table = dynamodb.Table("Coupon")
 
@@ -37,7 +37,7 @@ def calculatePrice(order: OrderRequest, coupon: Optional[Coupon]) -> float:
 def applyCoupon(order: OrderRequest):
     coupon = None
     if order.coupon_code:
-        response = table.get_item(Key=('code': order.coupon_code))
+        response = table.get_item(Key={'code': order.coupon_code})
         if "Item" not in response:
             raise HTTPException(status_code=400, detail = "Coupon not found!")
         coupon = Coupon(**response['Item'])

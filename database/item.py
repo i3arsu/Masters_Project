@@ -1,3 +1,4 @@
+from models.item import Item
 from .db import dynamodb
 from botocore.exceptions import ClientError
 from fastapi.responses import JSONResponse
@@ -19,7 +20,9 @@ def decimal_to_float(obj):
 def create_item(item: dict):
 
     try:
-        table.put_item(Item=item)
+        item['price'] = Decimal(str(item['price']))
+
+        table.put_item(Item = item)
         return item
     except ClientError as e:
         return JSONResponse(content=e.response["error"], status_code=500)
@@ -41,17 +44,16 @@ def get_item(id: str):
 def get_items():
 
     try:
-        response = table.scan(
-            Limit=200
-        )
+        response = table.scan(Limit=200)
 
-        items = response["Items", []]
-        
+        # Correctly retrieve the items from the response
+        items = response.get("Items", [])
+
+        # Convert the items to the Item Pydantic model
         return [Item(**item) for item in items]
 
     except ClientError as e:
-
-        return JSONResponse(content=e.response["error"], status_code=500)
+        return JSONResponse(content={"error": str(e)}, status_code=500)
     
 def delete_item(item: dict):
 

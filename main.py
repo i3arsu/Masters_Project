@@ -4,12 +4,14 @@ from pathlib import Path
 from mangum import Mangum
 from database.db import create_tables
 from routes.item import item_router
+from routes.coupon import coupon_router
 
 
 app = FastAPI()
 handler = Mangum(app)
 
 app.include_router(item_router, prefix="/item")
+app.include_router(coupon_router, prefix="/coupon")
 
 if __name__ == "__main__":
     try:
