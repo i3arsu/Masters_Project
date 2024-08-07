@@ -1,7 +1,10 @@
 import datetime
 
+from decimal import Decimal
 from typing import Optional
 from uuid import uuid4
+
+from aiohttp import ClientError
 from .db import dynamodb
 from fastapi import HTTPException
 from models.coupon import Coupon
@@ -54,6 +57,7 @@ def applyCoupon(order: OrderRequest):
 
 def completeOrder(order: OrderRequest):
     coupon = None
+    print(order)
     if order.coupon_code:
         response = table.get_item(Key={'code': order.coupon_code})
         if 'Item' not in response:
@@ -85,3 +89,20 @@ def completeOrder(order: OrderRequest):
         "final_price": final_price,
         "coupon_code": order.coupon_code
     }
+
+def create_coupon(coupon: Coupon):
+    try:
+        # Convert the coupon model to a dictionary
+        coupon_data = coupon
+
+        # Convert discount_percentage to Decimal if it's provided
+        if coupon_data.get('discount_percentage') is not None:
+            coupon_data['discount_percentage'] = Decimal(str(coupon_data['discount_percentage']))
+        
+        # Save the coupon to the DynamoDB table
+        table.put_item(Item=coupon_data)
+        
+        return coupon
+
+    except ClientError as e:
+        raise HTTPException(status_code=500, detail=str(e))
