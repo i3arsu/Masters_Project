@@ -50,11 +50,7 @@ tables = [
             {
                 'AttributeName': 'order_id',
                 'AttributeType': 'S'
-            },
-            {
-                'AttributeName': 'customer_id',
-                'AttributeType': 'S'
-            },
+            }
         ],
         "KeySchema": [
             {
@@ -62,25 +58,7 @@ tables = [
                 'KeyType': 'HASH'
             }
         ],
-        "GlobalSecondaryIndexes": [
-            {
-                'IndexName': 'CustomerOrderIndex',
-                'KeySchema': [
-                    {
-                        'AttributeName': 'customer_id',
-                        'KeyType': 'HASH'
-                    },
-                    {
-                        'AttributeName': 'order_id',
-                        'KeyType': 'RANGE'
-                    }
-                ],
-                'Projection': {
-                    'ProjectionType': 'ALL'
-                },
-            }
-        ]
-    }
+    },
 ]
 
 def create_tables():

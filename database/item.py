@@ -29,15 +29,17 @@ def create_item(item: dict):
     
 def get_item(id: str):
     try:
-        response = table.query(
-            KeyConditionExpression=Key("id").eq(id)
-        )
-        item = response.get('Item', [])
+        response = table.get_item(Key={"id": id})
+
+        item = response.get('Item')
+        
         if not item:
             return JSONResponse(content={"message": "Item not found"}, status_code=404)
         
+        # Convert DynamoDB decimal fields to float
         item = decimal_to_float(item)
         return JSONResponse(content=item, status_code=200)
+    
     except ClientError as e:
         return JSONResponse(content={"error": e.response['Error']['Message']}, status_code=500)
     

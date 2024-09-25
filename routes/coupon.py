@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from models.orderRequest import OrderRequest
 from models.orderResponse import OrderResponse
-from database.coupon import applyCoupon, completeOrder, create_coupon
+from database.coupon import applyCoupon, create_coupon, get_all
 from models.coupon import Coupon
 
 coupon_router = APIRouter()
@@ -13,3 +13,7 @@ async def apply(order: OrderRequest):
 @coupon_router.post("/create", response_model=Coupon)
 async def create(coupon: Coupon):
     return create_coupon(coupon.model_dump())
+
+@coupon_router.get("/all")
+async def getAll():
+    return get_all()

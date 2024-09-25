@@ -4,6 +4,7 @@ from pathlib import Path
 from mangum import Mangum
 from database.db import create_tables
 from routes.item import item_router
+from routes.order import order_router
 from routes.coupon import coupon_router
 
 
@@ -12,6 +13,7 @@ handler = Mangum(app)
 
 app.include_router(item_router, prefix="/item")
 app.include_router(coupon_router, prefix="/coupon")
+app.include_router(order_router, prefix="/order")
 
 if __name__ == "__main__":
     try:

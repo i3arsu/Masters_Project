@@ -3,7 +3,7 @@ import datetime
 from decimal import Decimal
 from typing import Optional
 from uuid import uuid4
-
+from fastapi.responses import JSONResponse
 from aiohttp import ClientError
 from .db import dynamodb
 from fastapi import HTTPException
@@ -11,6 +11,7 @@ from models.coupon import Coupon
 from models.orderRequest import OrderRequest
 
 table = dynamodb.Table("Coupon")
+order_table = dynamodb.Table('Order')
 
 
 def calculatePrice(order: OrderRequest, coupon: Optional[Coupon]) -> float:
@@ -22,7 +23,7 @@ def calculatePrice(order: OrderRequest, coupon: Optional[Coupon]) -> float:
         raise HTTPException(status_code=400, detail="Coupon has expired")
 
     discount = 0.0
-    total_price = sum(item.price for item in order.items)
+    total_price = sum(item['price'] for item in order['items'])
 
     # Calculate the discount
     if coupon.applicable_items:
@@ -39,56 +40,66 @@ def calculatePrice(order: OrderRequest, coupon: Optional[Coupon]) -> float:
 
 def applyCoupon(order: OrderRequest):
     coupon = None
-    if order.coupon_code:
-        response = table.get_item(Key={'code': order.coupon_code})
+    if order['coupon_code']:
+        response = table.get_item(Key={'code': order['coupon_code']})
         if "Item" not in response:
             raise HTTPException(status_code=400, detail = "Coupon not found!")
         coupon = Coupon(**response['Item'])
 
-    totalPrice = sum(item.price for item in order.items)
+    totalPrice = sum(item['price'] for item in order['items'])
     finalPrice = calculatePrice(order, coupon)
 
     return {
         "order_id": str(uuid4()),
         "total_price": totalPrice,
         "final_price": finalPrice,
-        "coupon_code": order.coupon_code
+        "coupon_code": order['coupon_code']
     }
 
-def completeOrder(order: OrderRequest):
+def completeOrder(order: OrderRequest):  # Expecting order to be a dictionary
     coupon = None
     print(order)
-    if order.coupon_code:
-        response = table.get_item(Key={'code': order.coupon_code})
+    
+    # Access coupon_code as a dictionary key
+    if order['coupon_code']:
+        response = table.get_item(Key={'code': order['coupon_code']})
         if 'Item' not in response:
             raise HTTPException(status_code=400, detail="Coupon not found")
         coupon = Coupon(**response['Item'])
 
-    # Calculate the final price after applying the coupon
-    total_price = sum(item.price for item in order.items)
-    final_price = applyCoupon(order, coupon)
+    # Convert all float values to Decimal
+    total_price = sum(Decimal(str(item['price'])) for item in order['items'])
+    final_price = applyCoupon(order)
+    final_price_decimal = Decimal(str(final_price['final_price']))
+
+    for item in order['items']:
+        item['price'] = Decimal(str(item['price']))
 
     # Generate order ID
     order_id = str(uuid4())
 
+    print(type(final_price_decimal), type(total_price))
+
     # Store order in the DB
     order_data = {
         'order_id': order_id,
-        'items': [item.dict() for item in order.items],
-        'total_price': total_price,
-        'final_price': final_price,
-        'coupon_code': order.coupon_code,
+        'items': order['items'],
+        "total_price": Decimal(total_price),  # Ensure total_price is Decimal
+        "final_price": final_price_decimal,   # Ensure final_price is Decimal
+        'coupon_code': order.get('coupon_code'),
         'status': 'completed'
     }
-    table.put_item(Item=order_data)
+    order_table.put_item(Item=order_data)
 
     return {
         "order_id": order_id,
-        "status": "completed",
-        "total_price": total_price,
-        "final_price": final_price,
-        "coupon_code": order.coupon_code
+        "status": 'completed',
+        "total_price": float(total_price),  # Convert back to float if needed for response
+        "final_price": float(final_price_decimal),  # Convert back to float for response
+        "coupon_code": order.get('coupon_code'),
+        "items": order['items']
     }
+
 
 def create_coupon(coupon: Coupon):
     try:
@@ -106,3 +117,14 @@ def create_coupon(coupon: Coupon):
 
     except ClientError as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+def get_all():
+    try:
+        response = table.scan(Limit=200)
+
+        coupons = response.get("Items", [])
+
+        return [Coupon(**coupon) for coupon in coupons]
+
+    except ClientError as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
