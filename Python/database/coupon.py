@@ -50,7 +50,10 @@ def applyCoupon(order: OrderRequest):
     finalPrice = calculatePrice(order, coupon)
 
     return {
+        "order_id": str(uuid4()),
+        "total_price": totalPrice,
         "final_price": finalPrice,
+        "coupon_code": order['coupon_code']
     }
 
 def completeOrder(order: OrderRequest):  # Expecting order to be a dictionary
