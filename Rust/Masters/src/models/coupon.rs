@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 pub struct Coupon {
     pub code: String,
     pub discount: u32,
-    pub is_redeemed: bool,
-    pub expiration_date: String,
+    pub applicable_items: Option<Vec<String>̣>
+    pub expires_at: Option<String>,
+    
 }
