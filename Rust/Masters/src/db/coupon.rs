@@ -19,13 +19,13 @@ pub async fn get_coupon_by_code(code: &str) -> Result<Coupon, CouponError> {
 
     let request = client
         .get_item()
-        .table_name("Coupons")
+        .table_name("Coupon")
         .key("code", AttributeValue::S(code.to_string()))
         .send()
         .await.map_err(|e| CouponError::ParseError(format!("Failed to get item from DynamoDB: {}", e)))?;
 
     if let Some(item) = request.item {
-        let discount = item.get("discount")
+        let discount = item.get("discount_percentage")
             .ok_or_else(|| CouponError::ParseError("Discount not found".to_string()))?
             .as_n()
             .map_err(|_| CouponError::ParseError("Failed to parse discount".to_string()))?

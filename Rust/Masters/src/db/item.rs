@@ -1,65 +1,43 @@
-use aws_sdk_dynamodb::{Client, Error};
 use aws_sdk_dynamodb::types::AttributeValue;
-use rust_decimal::Decimal;
-use serde::{Deserialize, Serialize};
-use actix_web::{HttpResponse};
+use aws_sdk_dynamodb::{Error, Client};
 use crate::models::item::Item;
+use crate::db::dynamodb::get_dynamodb_client;
+use actix_web::{web, HttpResponse, Responder};
+use thiserror::Error;
 
-// fn decimal_to_float(obj: &AttributeValue) -> f64 {
-//     match obj {
-//         AttributeValue::N(num) => num.parse::<f64>().unwrap_or(0.0),
-//         _ => 0.0,
-//     }
-// }
+#[derive(Debug, Error)]
+pub enum ItemError {
+    #[error("Item not found: {0}")]
+    NotFound(String),
 
-// pub async fn create_item(client: &Client, item: &mut Item) -> Result<Item> {
-//     item.price = Decimal::from_f64(item.price).unwrap();
+    #[error("DynamoDB error: {0}")]
+    DynamoDbError(#[from] aws_sdk_dynamodb::Error),
 
-//     let item_data = item.clone();
+    #[error("Failed to parse attribute")]
+    ParseError,
+}
 
-//     client.put_item().table_name("Item").item(item_data).send().await?;
-    
-//     Ok(item.clone())
-// }
+pub async fn get_item_by_id(id: &str) -> Result<Item, ItemError> {
+    let client = get_dynamodb_client().await;
 
-// pub async fn get_item(client: &Client, id: &str) -> Result<HttpResponse> {
-//     let response = client
-//         .get_item()
-//         .table_name("Item")
-//         .key("id", AttributeValue::S(id.to_string()))
-//         .send()
-//         .await?;
+    let request = client
+        .get_item()
+        .table_name("Item")
+        .key("id", AttributeValue::S(id.to_string()))
+        .send()
+        .await
+        .map_err(|err| {
+            ItemError::DynamoDbError(err.into())
+        })?;
 
-//     let item = response.item;
-
-//     // if item.is_none() {
-//     //     return Err(HttpException::new(404, "Item not found"));
-//     // }
-//     // Handle the Exception type
-
-//     let item = item.unwrap();
-//     let item = decimal_to_float(&item);
-
-//     Ok(HttpResponse::Ok().json(item))
-// }
-
-// pub async fn get_items(client: &Client) -> Result<Vec<Item>> {
-//     let response = client.scan().table_name("Item").limit(200).send().await?;
-
-//     let items: Vec<Item> = response.items().unwrap_or_default()
-//         .iter()
-//         .map(|item| Item::from(item.clone()))
-//         .collect();
-
-//     Ok(items)
-// }
-
-// pub async fn delete_item(client: &Client, barcode: &str) -> Result<HttpResponse> {
-//     let response = client.delete_item()
-//         .table_name("Item")
-//         .key("barcode", AttributeValue::S(barcode.to_string()))
-//         .send()
-//         .await?;
-
-//     Ok(HttpResponse::Ok().json(response))
-// }
+    if let Some(item) = request.item {
+        let fetched_item = Item {
+            id: item["id"].as_s().map_err(|_| ItemError::ParseError)?.to_string(),
+            name: item["name"].as_s().map_err(|_| ItemError::ParseError)?.to_string(),
+            price: item["price"].as_n().map_err(|_| ItemError::ParseError)?.parse().map_err(|_| ItemError::ParseError)?,
+        };
+        Ok(fetched_item)
+    } else {
+        Err(ItemError::NotFound("Item not found".to_string()))
+    }
+}

@@ -38,6 +38,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .service(web::resource("/").route(web::get().to(index)))
             .service(web::scope("/coupon").configure(routes::coupon::init_routes))
+            .service(web::scope("/item").configure(routes::item::init_routes))
     })
     .bind("127.0.0.1:8080")?
     .run()
