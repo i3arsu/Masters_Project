@@ -3,41 +3,97 @@ use aws_sdk_dynamodb::types::AttributeValue;
 use rust_decimal::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::models;
-use actix_web::{HttpResponse};
+use crate::models::coupon::Coupon;
+use crate::db::dynamodb::get_dynamodb_client;
+use actix_web::HttpResponse;
 
-pub async fn calculate_price(order: &models::orderRequest::OrderRequest, coupon: Option<&models::coupon::Coupon>) -> f64 {
-    if coupon.is_none() {
-        return order.items.iter().map(|item| item.price).sum();
-    }
-
-    let coupon = coupon.unwrap();
-
-    if let Some(expires_at) = &coupon.expiration_date {
-        if expires_at < &chrono::Utc::now().to_string() {
-            panic!("Coupon has expired");
-        }
-    }
-
-    let mut discount = Decimal::ZERO;
-    let total_price = order.items.iter().map(|item| item.price).sum::<f64>();
-
-    // Calculate the discount
-    if let Some(applicable_items) = &coupon.applicable_items {
-
-        for item in &order.items {
-            if applicable_items.contains(&item.id) {
-                discount += Decimal::from_f64(item.price).unwrap() * (Decimal::from_f64(coupon.discount_percentage / 100.0).unwrap());
-            }
-        }
-    } else {
-
-        discount = Decimal::from_f64(total_price).unwrap() * (Decimal::from_f64(coupon.discount_percentage / 100.0).unwrap());
-    }
-
-    let final_price = (Decimal::from_f64(total_price).unwrap() - discount).max(Decimal::ZERO);
-    final_price.to_f64().unwrap()
+#[derive(Debug)]
+pub enum CouponError {
+    NotFound(String),
+    ParseError(String),
+    // Add other error variants as needed
 }
+
+pub async fn get_coupon_by_code(code: &str) -> Result<Coupon, CouponError> {
+    let client = get_dynamodb_client().await;
+
+    let request = client
+        .get_item()
+        .table_name("Coupons")
+        .key("code", AttributeValue::S(code.to_string()))
+        .send()
+        .await.map_err(|e| CouponError::ParseError(format!("Failed to get item from DynamoDB: {}", e)))?;
+
+    if let Some(item) = request.item {
+        let discount = item.get("discount")
+            .ok_or_else(|| CouponError::ParseError("Discount not found".to_string()))?
+            .as_n()
+            .map_err(|_| CouponError::ParseError("Failed to parse discount".to_string()))?
+            .parse::<u32>()
+            .map_err(|_| CouponError::ParseError("Failed to parse discount to u32".to_string()))?;
+
+        let applicable_items = item.get("applicable_items").and_then(|v| {
+            v.as_l().ok().map(|list| {
+                list.iter()
+                    .filter_map(|val| val.as_s().ok().map(|s| s.to_string()))
+                    .collect::<Vec<String>>()
+            })
+        });
+
+        let expires_at = item.get("expires_at").and_then(|v| {
+            v.as_s().ok().map(|s| s.to_string())
+        });
+
+        let coupon = Coupon {
+            code: item.get("code")
+                .ok_or_else(|| CouponError::ParseError("Coupon code not found".to_string()))?
+                .as_s()
+                .map_err(|_| CouponError::ParseError("Failed to parse coupon code".to_string()))?
+                .to_string(),
+            discount,
+            applicable_items,
+            expires_at,
+        };
+        Ok(coupon)
+    } else {
+        Err(CouponError::NotFound("Coupon not found".to_string()))
+    }
+}
+
+
+
+// pub async fn calculate_price(order: &models::orderRequest::OrderRequest, coupon: Option<&models::coupon::Coupon>) -> f64 {
+//     if coupon.is_none() {
+//         return order.items.iter().map(|item| item.price).sum();
+//     }
+
+//     let coupon = coupon.unwrap();
+
+//     if let Some(expires_at) = &coupon.expiration_date {
+//         if expires_at < &chrono::Utc::now().to_string() {
+//             panic!("Coupon has expired");
+//         }
+//     }
+
+//     let mut discount = Decimal::ZERO;
+//     let total_price = order.items.iter().map(|item| item.price).sum::<f64>();
+
+//     // Calculate the discount
+//     if let Some(applicable_items) = &coupon.applicable_items {
+
+//         for item in &order.items {
+//             if applicable_items.contains(&item.id) {
+//                 discount += Decimal::from_f64(item.price).unwrap() * (Decimal::from_f64(coupon.discount_percentage / 100.0).unwrap());
+//             }
+//         }
+//     } else {
+
+//         discount = Decimal::from_f64(total_price).unwrap() * (Decimal::from_f64(coupon.discount_percentage / 100.0).unwrap());
+//     }
+
+//     let final_price = (Decimal::from_f64(total_price).unwrap() - discount).max(Decimal::ZERO);
+//     final_price.to_f64().unwrap()
+// }
 
 // pub async fn apply_coupon(client: &Client, order: &OrderRequest) -> Result<HttpResponse, HttpException> {
 //     let mut coupon = None;
