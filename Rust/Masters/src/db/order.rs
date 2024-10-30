@@ -14,7 +14,6 @@ pub async fn apply_coupon_to_order(
 ) -> Result<OrderResponse, OrderProcessingError> {
     let client = get_dynamodb_client().await;
 
-    // Generate a unique order ID
     let order_id = Uuid::new_v4().to_string();
 
     // Fetch items from the database
@@ -29,7 +28,6 @@ pub async fn apply_coupon_to_order(
         .map(|(item, order_item)| item.price * order_item.quantity as f64)
         .sum();
 
-    // Attempt to apply the coupon if provided
     let (discount_applied, final_price) = if let Some(coupon_code) = &order_request.coupon_code {
         match get_coupon_by_code(coupon_code).await {
             Ok(coupon) => {
@@ -46,7 +44,6 @@ pub async fn apply_coupon_to_order(
         (false, total_price)
     };
 
-    // Create the order response
     let order_response = OrderResponse {
         order_id,
         total_price,
@@ -54,7 +51,6 @@ pub async fn apply_coupon_to_order(
         final_price,
     };
 
-    // Return the order response directly
     Ok(order_response)
 }
 
