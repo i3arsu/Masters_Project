@@ -1,32 +1,23 @@
-use aws_sdk_dynamodb::{Client, Error};
-use aws_sdk_dynamodb::model::AttributeValue;
-use crate::models::coupon::Coupon;
-use serde_dynamodb;
+extern crate aws_sdk_dynamodb;
+extern crate aws_types;
+extern crate tokio;
 
-pub async fn get_coupon_by_code(client: Client, code: String) -> Result<Option<Coupon>, Error> {
-    let result = client
-        .get_item()
-        .table_name("Coupons")
-        .key("code", AttributeValue::S(code))
-        .send()
-        .await?;
+use aws_sdk_dynamodb::{Client, Config};
+use aws_types::SdkConfig;
+use std::sync::Arc;
+use tokio::sync::OnceCell;
 
-    if let Some(item) = result.item {
-        let coupon: Coupon = serde_dynamodb::from_hashmap(item).unwrap();
-        Ok(Some(coupon))
-    } else {
-        Ok(None)
-    }
-}
 
-pub async fn update_coupon(coupon: Coupon, client: Client) -> Result<(), Error> {
-    client
-        .update_item()
-        .table_name("Coupons")
-        .key("code", AttributeValue::S(coupon.code.clone()))
-        .update_expression("SET is_redeemed = :r")
-        .expression_attribute_values(":r", AttributeValue::Bool(coupon.is_redeemed))
-        .send()
-        .await?;
-    Ok(())
+// Singleton
+static DYNAMODB_CLIENT: OnceCell<Arc<Client>> = OnceCell::const_new();
+
+pub async fn get_dynamodb_client() -> Arc<Client> {
+    DYNAMODB_CLIENT
+        .get_or_init(|| async {
+            let shared_config = aws_config::load_from_env().await;
+            let client = Client::new(&shared_config);
+            Arc::new(client)
+        })
+        .await
+        .clone()
 }

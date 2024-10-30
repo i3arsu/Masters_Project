@@ -118,6 +118,20 @@ def create_coupon(coupon: Coupon):
     except ClientError as e:
         raise HTTPException(status_code=500, detail=str(e))
     
+def get_coupon(code: str):
+    try:
+        response = table.get_item(Key={"code": code})
+
+        coupon = response.get('Coupon')
+        
+        if not coupon:
+            return JSONResponse(content={"message": "Coupon not found"}, status_code=404)
+        
+        return JSONResponse(content=coupon, status_code=200)
+    
+    except ClientError as e:
+        return JSONResponse(content={"error": e.response['Error']['Message']}, status_code=500)
+    
 def get_all():
     try:
         response = table.scan(Limit=200)

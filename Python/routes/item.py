@@ -8,7 +8,7 @@ item_router = APIRouter()
 async def create(item: Item):
     return create_item(item.model_dump())
 
-@item_router.get("/get/{id}")
+@item_router.get("/id/{id}")
 async def get_one_item(id: str):
     return get_item(id)
 
