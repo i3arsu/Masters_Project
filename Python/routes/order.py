@@ -1,7 +1,6 @@
 from fastapi import APIRouter
 from models.order import OrderRequest, OrderResponse
-from models.completedOrder import CompleteOrderResponse
-from database.order import completeOrder, applyCoupon
+from database.order import applyCoupon
 
 order_router = APIRouter()
 
