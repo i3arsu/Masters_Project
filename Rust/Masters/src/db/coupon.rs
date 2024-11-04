@@ -65,7 +65,7 @@ pub async fn create_coupon(coupon: web::Json<Coupon>) -> Result<String, CouponEr
         .put_item()
         .table_name("Coupon")
         .item("code", AttributeValue::S(new_coupon.code.clone()))
-        .item("discount", AttributeValue::N(new_coupon.discount.to_string()));
+        .item("discount_percentage", AttributeValue::N(new_coupon.discount.to_string()));
 
     if let Some(applicable_items) = &new_coupon.applicable_items {
         let items = applicable_items.iter()
