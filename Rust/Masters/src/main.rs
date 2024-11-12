@@ -44,7 +44,7 @@ async fn main() -> std::io::Result<()> {
             .service(web::scope("/item").configure(routes::item::init_routes))
             .service(web::scope("/order").configure(routes::order::init_routes))
     })
-    .bind("127.0.0.1:8080")?
+    .bind("0.0.0.0:8000")?
     .run()
     .await
 }

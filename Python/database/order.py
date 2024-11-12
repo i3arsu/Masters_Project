@@ -3,6 +3,7 @@ import json
 from models.coupon import Coupon
 from .db import dynamodb
 from fastapi import HTTPException
+from fastapi.responses import JSONResponse
 from decimal import Decimal
 from models.order import OrderItem, OrderRequest, OrderResponse
 from .coupon import get_coupon
@@ -60,10 +61,10 @@ def applyCoupon(order: OrderRequest):
     total_price = sum(item['price'] * order_item.quantity for item, order_item in zip(fetched_items, order.items))
     final_price = calculatePrice(order, coupon, fetched_items)
 
-    return {
+    return JSONResponse(content={
         "order_id": str(uuid4()),
         "total_price": total_price,
         "final_price": final_price,
         "discount_applied": bool(coupon),
-    }
+    }, status_code=200)
 
