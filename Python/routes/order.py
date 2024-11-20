@@ -6,4 +6,5 @@ order_router = APIRouter()
 
 @order_router.post("/apply/", response_model=OrderResponse)
 async def apply(order: OrderRequest):
-    return applyCoupon(order)
+    response = await applyCoupon(order)
+    return response

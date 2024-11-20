@@ -6,12 +6,15 @@ item_router = APIRouter()
 
 @item_router.post("/create", response_model=Item)
 async def create(item: Item):
-    return create_item(item.model_dump())
+    response = await create_item(item.model_dump())
+    return response
 
 @item_router.get("/id/{id}")
 async def get_one_item(id: str):
-    return get_item(id)
+    response = await get_item(id)
+    return response
 
 @item_router.get("/all")
 async def get_all_items():
-    return get_items()
+    response = await get_items()
+    return response
