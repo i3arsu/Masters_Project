@@ -1,11 +1,9 @@
 import datetime
 import json
 from models.coupon import Coupon
-from .db import dynamo_client
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse
-from decimal import Decimal
-from models.order import OrderItem, OrderRequest, OrderResponse
+from models.order import OrderRequest, OrderResponse
 from .coupon import get_coupon
 from .item import get_item
 from typing import Optional, List
@@ -52,10 +50,12 @@ async def applyCoupon(order: OrderRequest):
     total_price = sum(item['price'] * order_item.quantity for item, order_item in zip(fetched_items, order.items))
     final_price = calculatePrice(order, coupon, fetched_items)
 
-    return JSONResponse(content={
-        "order_id": str(uuid4()),
-        "total_price": total_price,
-        "final_price": final_price,
-        "discount_applied": bool(coupon),
-    }, status_code=200)
+    order_response = OrderResponse(
+        order_id = str(uuid4()),
+        total_price = total_price,
+        discount_applied = bool(coupon),
+        final_price = final_price
+    )
+
+    return JSONResponse(content=order_response.dict() , status_code=200)
 

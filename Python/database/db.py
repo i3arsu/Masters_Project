@@ -2,7 +2,6 @@ import os
 from aiodynamo.client import Client
 from aiodynamo.credentials import Credentials
 from aiodynamo.http.aiohttp import AIOHTTP
-from fastapi import FastAPI
 import aiohttp
 
 class DynamoDBClient:

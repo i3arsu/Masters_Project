@@ -6,6 +6,8 @@ from decimal import Decimal
 from .db import dynamo_client
 from uuid import uuid4
 
+
+
 async def create_item(item: dict):
     table = dynamo_client.client.table("Item")
 
@@ -35,6 +37,7 @@ async def get_items():
 
 async def get_item(id: str):
     table = dynamo_client.client.table("Item")
+    
     try:
         response = await table.get_item(
             key={"id": id}

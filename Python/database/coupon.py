@@ -15,9 +15,9 @@ def decimal_to_float(obj):
         return float(obj)
     else:
         return obj
+    
 
 async def create_coupon(coupon: Coupon):
-
     table = dynamo_client.client.table("Coupon")
 
     try:
@@ -36,7 +36,6 @@ async def create_coupon(coupon: Coupon):
         raise HTTPException(status_code=500, detail=str(e))
     
 async def get_coupon(code: str):
-
     table = dynamo_client.client.table("Coupon")
 
     try:
@@ -51,7 +50,6 @@ async def get_coupon(code: str):
         return JSONResponse(content={"error": f"Coupon: {code} does NOT exist."}, status_code=404)
     
 async def get_all():
-
     table = dynamo_client.client.table("Coupon")
 
     try:
