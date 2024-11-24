@@ -2,46 +2,54 @@ from models.item import Item
 from botocore.exceptions import ClientError
 from fastapi.responses import JSONResponse
 from aiodynamo.errors import ItemNotFound
+from boto3.dynamodb.conditions import Key
 from decimal import Decimal
-from .db import dynamo_client
+from .db import DynamoDBTables
 from uuid import uuid4
 
-
+def decimal_to_float(obj):
+    if isinstance(obj, list):
+        return [decimal_to_float(i) for i in obj]
+    elif isinstance(obj, dict):
+        return {k: decimal_to_float(v) for k, v in obj.items()}
+    elif isinstance(obj, Decimal):
+        return float(obj)
+    else:
+        return obj
 
 async def create_item(item: dict):
-    table = dynamo_client.client.table("Item")
+    table = await DynamoDBTables.get_table("Item")
 
     try:
         item['price'] = Decimal(str(item['price']))
         item['id'] = str(uuid4())
 
-        await table.put_item(item = item)
+        await table.put_item(Item = item)
         return item
     except ClientError as e:
         return JSONResponse(content=e.response["error"], status_code=500)
 
 async def get_items():
-    table = dynamo_client.client.table("Item")
-
+    table = await DynamoDBTables.get_table("Item")
+    
     try:
-        items = []
-        # Iterate over the asynchronous generator
-        async for item in table.scan(limit=200):
-            items.append(item)
+    
+        items = await table.scan(Limit=200)
 
-        # Convert the items to the Item Pydantic model
-        return [Item(**item) for item in items]
+        return [Item(**item) for item in items['Items']]
 
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
 async def get_item(id: str):
-    table = dynamo_client.client.table("Item")
-    
+    table = await DynamoDBTables.get_table("Item")
+
     try:
         response = await table.get_item(
-            key={"id": id}
+            Key={"id": id}
         )
+        
+        response = decimal_to_float(response['Item'])
 
         return JSONResponse(content=response, status_code=200)
     

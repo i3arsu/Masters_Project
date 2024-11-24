@@ -1,26 +1,20 @@
-import os
-from aiodynamo.client import Client
-from aiodynamo.credentials import Credentials
-from aiodynamo.http.aiohttp import AIOHTTP
-import aiohttp
+import aioboto3
 
-class DynamoDBClient:
-    def __init__(self):
-        self.client = None
-        self.session = None
+class DynamoDBTables:
+    _resource = None
+    _tables = {}
 
-    async def init_client(self):
+    @classmethod
+    async def get_resource(cls):
+        session = aioboto3.Session()
+        if cls._resource is None:
+            async with session.resource("dynamodb", region_name="eu-north-1") as dynamo_resource:
+                cls._resource = dynamo_resource
+        return cls._resource
 
-        self.session = aiohttp.ClientSession()
-        self.client = Client(
-            AIOHTTP(self.session),
-            Credentials.auto(),
-            "eu-north-1",
-        )
-
-    async def close_client(self):
-        if self.session:
-            await self.session.close()
-
-# Create a shared DynamoDB client instance
-dynamo_client = DynamoDBClient()
+    @classmethod
+    async def get_table(cls, table_name: str):
+        if table_name not in cls._tables:
+            resource = await cls.get_resource()
+            cls._tables[table_name] = await resource.Table(table_name)
+        return cls._tables[table_name]

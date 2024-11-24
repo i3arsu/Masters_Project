@@ -1,7 +1,7 @@
 from decimal import Decimal
 from fastapi.responses import JSONResponse
 from aiohttp import ClientError
-from .db import dynamo_client
+from .db import DynamoDBTables
 from fastapi import HTTPException
 from aiodynamo.errors import ItemNotFound
 from models.coupon import Coupon
@@ -16,9 +16,8 @@ def decimal_to_float(obj):
     else:
         return obj
     
-
 async def create_coupon(coupon: Coupon):
-    table = dynamo_client.client.table("Coupon")
+    table = await DynamoDBTables.get_table("Coupon")
 
     try:
         coupon_data = coupon
@@ -36,10 +35,10 @@ async def create_coupon(coupon: Coupon):
         raise HTTPException(status_code=500, detail=str(e))
     
 async def get_coupon(code: str):
-    table = dynamo_client.client.table("Coupon")
+    table = await DynamoDBTables.get_table("Coupon")
 
     try:
-        coupon = await table.get_item(key={"code": code})
+        coupon = await table.get_item(Key={"code": code})
         
         coupon = decimal_to_float(coupon)
         return JSONResponse(content=coupon, status_code=200)
@@ -50,15 +49,12 @@ async def get_coupon(code: str):
         return JSONResponse(content={"error": f"Coupon: {code} does NOT exist."}, status_code=404)
     
 async def get_all():
-    table = dynamo_client.client.table("Coupon")
+    table = await DynamoDBTables.get_table("Coupon")
 
     try:
-        coupons = []
-        async for coupon in table.scan(limit=200):
-            coupons.append(coupon)
-
-        # Convert the items to the Item Pydantic model
-        return [Coupon(**coupon) for coupon in coupons]
+        coupons = await table.scan(Limit=200)
+        
+        return [Coupon(**coupon) for coupon in coupons['Items']]
 
     except ClientError as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
