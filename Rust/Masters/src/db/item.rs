@@ -112,3 +112,19 @@ pub async fn create_item(item: web::Json<Item>) -> Result<String, ItemError> {
     // Return a success message
     Ok("Item created successfully.".to_string())
 }
+
+pub async fn delete_item_by_id(item_id: &str) -> Result<(), ItemError> {
+    let client = get_dynamodb_client().await;
+
+    let request = client
+        .delete_item()
+        .table_name("Item")
+        .key("id", AttributeValue::S(item_id.to_string()))
+        .send()
+        .await;
+
+    match request {
+        Ok(_) => Ok(()),
+        Err(_) => Err(ItemError::DynamoDbError),
+    }
+}

@@ -29,6 +29,15 @@ async fn create(item_request: web::Json<Item>) -> Result<HttpResponse, ItemError
     }
 }
 
+#[delete("/remove/{item_id}")]
+async fn remove_coupon(path: web::Path<String>) -> Result<HttpResponse, ItemError> {
+    let item_id = path.into_inner();
+    match item::delete_item_by_id(&item_id).await {
+        Ok(response) => Ok(HttpResponse::Ok().json(response)),
+        Err(err) => Err(err),
+    }
+}
+
 pub fn init_routes(cfg: &mut web::ServiceConfig) {
     cfg.service(get_item_by_id);
     cfg.service(all_items);

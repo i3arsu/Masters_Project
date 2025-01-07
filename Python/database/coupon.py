@@ -29,7 +29,7 @@ async def create_coupon(coupon: Coupon):
         # Save the coupon to the DynamoDB table
         await table.put_item(Item=coupon_data)
         
-        return coupon
+        return JSONResponse(content=coupon_data, status_code=200)
 
     except ClientError as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -54,7 +54,9 @@ async def get_all():
     try:
         coupons = await table.scan(Limit=200)
         
-        return [Coupon(**coupon) for coupon in coupons['Items']]
+        response = [Coupon(**coupon) for coupon in coupons['Items']]
+        
+        return JSONResponse(content=[coupon.dict() for coupon in response], status_code=200)
 
     except ClientError as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)

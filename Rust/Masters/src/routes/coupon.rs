@@ -29,6 +29,15 @@ async fn get_all_coupons() -> Result<HttpResponse, CouponError> {
     }
 }
 
+#[delete("/remove/{code}")]
+async fn remove_coupon(path: web::Path<String>) -> Result<HttpResponse, CouponError> {
+    let code = path.into_inner();
+    match coupon::delete_coupon_by_code(&code).await {
+        Ok(response) => Ok(HttpResponse::Ok().json(response)),
+        Err(err) => Err(err),
+    }
+}
+
 pub fn init_routes(cfg: &mut web::ServiceConfig) {
     cfg.service(get_coupon_by_code);
     cfg.service(create_coupon);

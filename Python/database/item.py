@@ -25,7 +25,7 @@ async def create_item(item: dict):
         item['id'] = str(uuid4())
 
         await table.put_item(Item = item)
-        return item
+        return JSONResponse(content=item, status_code=200)
     except ClientError as e:
         return JSONResponse(content=e.response["error"], status_code=500)
 
@@ -34,9 +34,11 @@ async def get_items():
     
     try:
     
-        items = await table.scan(Limit=200)
+        items = await table.scan(Limit=100)
+        
+        response = [Item(**item) for item in items['Items']]
 
-        return [Item(**item) for item in items['Items']]
+        return JSONResponse(content = [item.dict() for item in response], status_code=200)
 
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)

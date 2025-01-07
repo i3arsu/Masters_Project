@@ -130,7 +130,22 @@ pub async fn get_all_coupons() -> Result<Vec<Coupon>, CouponError> {
         Ok(Coupon { code, discount, applicable_items, expires_at })
     }).collect();
 
-    
-
     fetched_coupons
 }
+
+pub async fn delete_coupon_by_code(code: &str) -> Result<(), CouponError> {
+    let client = get_dynamodb_client().await;
+
+    let request = client
+        .delete_item()
+        .table_name("Coupon")
+        .key("code", AttributeValue::S(code.to_string()))
+        .send()
+        .await;
+
+    match request {
+        Ok(_) => Ok(()),
+        Err(_) => Err(CouponError::DynamoDbError),
+    }
+}
+
