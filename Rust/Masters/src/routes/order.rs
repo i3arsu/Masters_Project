@@ -7,7 +7,7 @@ use crate::errors::errors::OrderProcessingError;
 async fn apply_coupon(order_request: web::Json<OrderRequest>) -> Result<HttpResponse, OrderProcessingError> {
     match order::apply_coupon_to_order(order_request).await {
         Ok(order_response) => Ok(HttpResponse::Ok().json(order_response)),
-        Err(err) => Err(err), // Propagate the custom error
+        Err(err) => Err(err),
     }
 }
 
