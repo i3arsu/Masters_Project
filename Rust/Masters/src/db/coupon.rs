@@ -98,8 +98,6 @@ pub async fn get_all_coupons() -> Result<Vec<Coupon>, CouponError> {
 
     let items = request.items.unwrap_or_default();
 
-    println!("{:?}", items);
-
     let fetched_coupons: Result<Vec<Coupon>, CouponError> = items.into_iter().map(|item| {
         let code = item.get("code")
             .and_then(|v| v.as_s().ok())
