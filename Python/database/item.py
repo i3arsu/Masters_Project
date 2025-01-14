@@ -59,8 +59,6 @@ async def create_item(item: dict):
             item['id'] = str(uuid4())
             
             dynamo_item = to_dynamodb_json(item)
-            
-            print(dynamo_item)
 
             await client.put_item(TableName="Item",Item = dynamo_item)
             return JSONResponse(content="Item created successfully!", status_code=200)

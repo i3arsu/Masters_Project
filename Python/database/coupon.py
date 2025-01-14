@@ -91,8 +91,6 @@ async def get_all():
             
             deserialized_coupons = deserialize(coupons['Items'])
             
-            print(deserialized_coupons)
-            
             response = [Coupon(**coupon) for coupon in deserialized_coupons]
             
             return JSONResponse(content=[coupon.dict() for coupon in response], status_code=200)
