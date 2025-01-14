@@ -18,3 +18,22 @@ class DynamoDBTables:
             client = await cls.get_resource()
             cls._tables[table_name] = await client.Table(table_name)
         return cls._tables[table_name]
+    
+    @classmethod
+    async def close_client(cls):
+        client = await cls.get_resource()
+        if client:
+            await client.close()
+            return print("Client closed")
+        
+class DynamoDBClient:
+    def __init__(self):
+        self._session = aioboto3.Session()
+
+    async def __aenter__(self):
+        self._client = self._session.client('dynamodb')
+        return await self._client.__aenter__()
+
+    async def __aexit__(self, exc_type, exc_value, traceback):
+        if self._client:
+            await self._client.__aexit__(exc_type, exc_value, traceback)
