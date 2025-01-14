@@ -1,13 +1,12 @@
 from decimal import Decimal
 from fastapi.responses import JSONResponse
 from aiohttp import ClientError
-from .db import DynamoDBClient
+from .db import DynamoDBClientManager
 from boto3.dynamodb.types import TypeDeserializer, TypeSerializer
 from fastapi import HTTPException
 from aiodynamo.errors import ItemNotFound
 from models.coupon import Coupon
 
-dynamo = DynamoDBClient()
 serializer = TypeSerializer()
 deserializer = TypeDeserializer()
 
@@ -51,33 +50,33 @@ def deserialize(data):
         return data
     
 async def create_coupon(coupon: Coupon):
+    client = await DynamoDBClientManager.get_client()
     try:
-        async with DynamoDBClient() as client:
             
-            coupon_data = coupon
+        coupon_data = coupon
 
-            # Convert discount_percentage to Decimal if it's provided
-            if coupon_data.get('discount_percentage') is not None:
-                coupon_data['discount_percentage'] = Decimal(str(coupon_data['discount_percentage']))
+        # Convert discount_percentage to Decimal if it's provided
+        if coupon_data.get('discount_percentage') is not None:
+            coupon_data['discount_percentage'] = Decimal(str(coupon_data['discount_percentage']))
             
-            # Save the coupon to the DynamoDB table
-            await client.put_item(TableName="Coupon", Item=to_dynamodb_json(coupon_data))
+        # Save the coupon to the DynamoDB table
+        await client.put_item(TableName="Coupon", Item=to_dynamodb_json(coupon_data))
             
-            return JSONResponse(content="Coupon created successfully!", status_code=200)
+        return JSONResponse(content="Coupon created successfully!", status_code=200)
 
     except ClientError as e:
         raise HTTPException(status_code=500, detail=str(e))
     
 async def get_coupon(code: str):
+    client = await DynamoDBClientManager.get_client()
+    
     try:
-        async with DynamoDBClient() as client:
-            
-            response = await client.get_item(
-                TableName="Coupon",
-                Key={"code": serializer.serialize(code)})
-            
-            response = deserialize(response['Item'])
-            return JSONResponse(content=response, status_code=200)
+        response = await client.get_item(
+            TableName="Coupon",
+            Key={"code": serializer.serialize(code)})
+        
+        response = deserialize(response['Item'])
+        return JSONResponse(content=response, status_code=200)
     
     except ClientError as e:
         return JSONResponse(content={"error": e.response['Error']['Message']}, status_code=500)
@@ -85,15 +84,16 @@ async def get_coupon(code: str):
         return JSONResponse(content={"error": f"Coupon: {code} does NOT exist."}, status_code=404)
     
 async def get_all():
+    client = await DynamoDBClientManager.get_client()
+    
     try:
-        async with DynamoDBClient() as client:
-            coupons = await client.scan(TableName="Coupon", Limit=100)
+        coupons = await client.scan(TableName="Coupon", Limit=100)
             
-            deserialized_coupons = deserialize(coupons['Items'])
+        deserialized_coupons = deserialize(coupons['Items'])
             
-            response = [Coupon(**coupon) for coupon in deserialized_coupons]
+        response = [Coupon(**coupon) for coupon in deserialized_coupons]
             
-            return JSONResponse(content=[coupon.dict() for coupon in response], status_code=200)
+        return JSONResponse(content=[coupon.dict() for coupon in response], status_code=200)
 
     except ClientError as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)

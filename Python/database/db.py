@@ -1,39 +1,28 @@
 import aioboto3
 
-class DynamoDBTables:
+class DynamoDBClientManager:
+    """
+    A manager for creating and reusing a single aioboto3 DynamoDB client.
+    """
+    _session = None
     _client = None
-    _tables = {}
 
-    @classmethod
-    async def get_resource(cls):
-        session = aioboto3.Session()
-        if cls._client is None:
-            async with session.client("dynamodb", region_name="eu-north-1") as dynamo_client:
-                cls._client = dynamo_client
-        return cls._client
+    @staticmethod
+    async def get_client():
+        """
+        Returns a reusable DynamoDB client.
+        """
+        if DynamoDBClientManager._client is None:
+            if DynamoDBClientManager._session is None:
+                DynamoDBClientManager._session = aioboto3.Session()
+            DynamoDBClientManager._client = await DynamoDBClientManager._session.client("dynamodb").__aenter__()
+        return DynamoDBClientManager._client
 
-    @classmethod
-    async def get_table(cls, table_name: str):
-        if table_name not in cls._tables:
-            client = await cls.get_resource()
-            cls._tables[table_name] = await client.Table(table_name)
-        return cls._tables[table_name]
-    
-    @classmethod
-    async def close_client(cls):
-        client = await cls.get_resource()
-        if client:
-            await client.close()
-            return print("Client closed")
-        
-class DynamoDBClient:
-    def __init__(self):
-        self._session = aioboto3.Session()
-
-    async def __aenter__(self):
-        self._client = self._session.client('dynamodb')
-        return await self._client.__aenter__()
-
-    async def __aexit__(self, exc_type, exc_value, traceback):
-        if self._client:
-            await self._client.__aexit__(exc_type, exc_value, traceback)
+    @staticmethod
+    async def close_client():
+        """
+        Closes the DynamoDB client to release resources.
+        """
+        if DynamoDBClientManager._client is not None:
+            DynamoDBClientManager._client.__aexit__(None, None, None)
+            DynamoDBClientManager._client = None

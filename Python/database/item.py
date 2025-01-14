@@ -1,14 +1,12 @@
 from decimal import Decimal
-import decimal
 from uuid import uuid4
+from .db import DynamoDBClientManager
 from aiodynamo.errors import ItemNotFound
 from boto3.dynamodb.types import TypeDeserializer, TypeSerializer
 from botocore.exceptions import ClientError
 from fastapi.responses import JSONResponse
 from models.item import Item
-from .db import DynamoDBClient
 
-dynamo = DynamoDBClient()
 serializer = TypeSerializer()
 deserializer = TypeDeserializer()
 
@@ -52,45 +50,48 @@ def deserialize(data):
         return data
 
 async def create_item(item: dict):
+    
+    client = await DynamoDBClientManager.get_client()
 
     try:
-        async with DynamoDBClient() as client:
-            item['price'] = Decimal(str(item['price']))
-            item['id'] = str(uuid4())
+        item['price'] = Decimal(str(item['price']))
+        item['id'] = str(uuid4())
             
-            dynamo_item = to_dynamodb_json(item)
+        dynamo_item = to_dynamodb_json(item)
 
-            await client.put_item(TableName="Item",Item = dynamo_item)
-            return JSONResponse(content="Item created successfully!", status_code=200)
+        await client.put_item(TableName="Item",Item = dynamo_item)
+        return JSONResponse(content="Item created successfully!", status_code=200)
     except ClientError as e:
         return JSONResponse(content=e.response["error"], status_code=500)
 
 async def get_items():
-    try:
-        async with DynamoDBClient() as client:
+    
+    client = await DynamoDBClientManager.get_client()
+    
+    try:     
+        items = await client.scan(TableName="Item", Limit=100)
             
-            items = await client.scan(TableName="Item", Limit=100)
+        deserialized_items = deserialize(items['Items'])
             
-            deserialized_items = deserialize(items['Items'])
-            
-            response = [Item(**item) for item in deserialized_items]
+        response = [Item(**item) for item in deserialized_items]
 
-            return JSONResponse(content = [item.dict() for item in response], status_code=200)
+        return JSONResponse(content = [item.dict() for item in response], status_code=200)
 
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
 async def get_item(id: str):
-    try:
-        async with DynamoDBClient() as client:   
-            response = await client.get_item(
-                TableName="Item",
-                Key={"id": serializer.serialize(id)}
-            )
+    client = await DynamoDBClientManager.get_client()
+    
+    try:  
+        response = await client.get_item(
+            TableName="Item",
+            Key={"id": serializer.serialize(id)}
+        )
         
-            response = deserialize(response['Item'])
+        response = deserialize(response['Item'])
 
-            return JSONResponse(content=response, status_code=200)
+        return JSONResponse(content=response, status_code=200)
     
     except ClientError as e:
         return JSONResponse(content={"error": e.response['Error']['Message']}, status_code=500)
