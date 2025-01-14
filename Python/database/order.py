@@ -37,7 +37,7 @@ async def applyCoupon(order: OrderRequest):
       
         if response.status_code == 200:
             response_data = json.loads(response.body.decode())
-            coupon = Coupon(**response_data['Item'])
+            coupon = Coupon(**response_data)
         else:
             raise HTTPException(status_code=400, detail="Coupon not found")
 
