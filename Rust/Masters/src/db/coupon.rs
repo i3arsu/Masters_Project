@@ -104,7 +104,7 @@ pub async fn get_all_coupons() -> Result<Vec<Coupon>, CouponError> {
             .ok_or(CouponError::MissingAttribute)?
             .to_string();
 
-            let discount = match item.get("discount") {
+            let discount = match item.get("discount_percentage") {
                 Some(attr) => attr.as_n()
                     .map_err(|_| CouponError::MissingAttribute)?
                     .parse::<u32>()
