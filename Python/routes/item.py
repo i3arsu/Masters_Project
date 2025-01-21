@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from database.item import create_item, get_item, get_items
+from database.item import create_item, get_item, get_items, remove_item
 from models.item import Item
 
 item_router = APIRouter()
@@ -17,4 +17,9 @@ async def get_one_item(id: str):
 @item_router.get("/all")
 async def get_all_items():
     response = await get_items()
+    return response
+
+@item_router.delete("/remove/{id}")
+async def delete_item(id: str):
+    response = await remove_item(id)
     return response

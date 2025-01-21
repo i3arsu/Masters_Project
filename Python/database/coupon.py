@@ -53,3 +53,21 @@ async def get_all() -> JSONResponse:
 
     except ClientError as e:
         return JSONResponse(content={"error": f"AWS Client Error: {str(e)}"}, status_code=500)
+    
+async def remove_coupon(code: str) -> JSONResponse:
+    client = await DynamoDBClientManager.get_client()
+    try:
+        response = await client.delete(
+            TableName="Coupon",
+            Key={"id": serializer.serialize(code)}
+        )
+
+        if 'Item' not in response:
+            raise ItemNotFound(f"Item with ID: {code} does NOT exist.")
+
+        return JSONResponse(content="Coupon removed successfully!", status_code=200)
+
+    except ClientError as e:
+        return JSONResponse(content={"error": f"AWS Client Error: {e.response.get('Error', {}).get('Message', 'Unknown error')}"}, status_code=500)
+    except ItemNotFound:
+        return JSONResponse(content={"error": f"Coupon with code: {code} does NOT exist."}, status_code=404)

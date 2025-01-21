@@ -1,5 +1,6 @@
+from urllib import response
 from fastapi import APIRouter
-from database.coupon import create_coupon, get_all, get_coupon
+from database.coupon import create_coupon, get_all, get_coupon, remove_coupon
 from models.coupon import Coupon
 
 coupon_router = APIRouter()
@@ -17,4 +18,9 @@ async def getAll():
 @coupon_router.get("/get/{code}", response_model=Coupon)
 async def getCoupon(code: str):
     response = await get_coupon(code)
+    return response
+
+@coupon_router.delete("/remove/{code}")
+async def delete_coupon(code: str):
+    response = await remove_coupon(code)
     return response
